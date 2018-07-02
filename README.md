@@ -14,5 +14,7 @@ I used following docker containers:
 
 1. Plex - https://hub.docker.com/r/linuxserver/plex/
 2. Handbrake - https://github.com/jlesage/docker-handbrake
-3. watchtower - 
-4. 
+3. Watchtower - https://github.com/v2tec/watchtower
+4. Resillio sync -https://hub.docker.com/r/linuxserver/resilio-sync/
+5. AirConnect - https://github.com/swilsonau/docker-airconnect/blob/master/docker-compose.yml
+6. MariaDB - https://hub.docker.com/r/linuxserver/mariadb/
