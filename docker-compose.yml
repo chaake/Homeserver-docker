@@ -1,0 +1,153 @@
+version: "2"
+networks:
+    extern:
+     ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+services:
+ plex:
+    container_name: plex
+    image: linuxserver/plex
+    network_mode: host
+    restart: unless-stopped
+    hostname: XXXX 
+    ports:
+      - 32400:32400
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /data/config:/config
+      - /(File location)/dump/:/data:rw     (I use an external Raidsystem)
+    environment:
+      - PUID=1000
+      - PGID=999
+      - PLEX_USERNAME=
+      - PLEX_PASSWORD=
+      - PLEX_TOKEN=
+      - ADVERTISE_IP=http://192.168.178.52:32401/
+ portainer:
+    image: portainer/portainer
+    container_name: portainer
+    restart: always
+    command: --templates http://templates/templates.json
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${USERDIR}/docker/portainer/data:/data
+      - ${USERDIR}/docker/shared:/shared
+    environment:
+      - TZ=${TZ}
+ watchtower:
+    container_name: watchtower
+    restart: always
+    image: v2tec/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --schedule "0 0 4 * * *" --cleanup
+ duckdns:
+    container_name: duckdns
+    image: linuxserver/duckdns
+    network_mode: host
+    restart: unless-stopped
+    ports:
+      - 8181:8181
+    environment:
+      - TZ=${TZ}
+      - IPV6=yes
+      - TOKEN=XXXXX
+      - SUBDOMAINS=XXXX
+ handbrake:
+    container_name: handbrake
+    restart: unless-stopped
+    image: jlesage/handbrake 
+    ports:
+      - 5800:5800
+    volumes:
+      - ${USERDIR}/docker/Handbrake/config:/config:rw
+      - ${USERDIR}/docker/Handbrake/watch:/watch:rw
+      - ${USERDIR}/docker/Handbrake/storage/temp:/output:rw
+      - ${USERDIR}/docker/Handbrake/storage:/storage:ro
+    environment:
+      - PUID=1000
+      - PGID=999
+      - AUTOMATED_CONVERSION_PRESET=Very Fast 1080p30
+      - AUTOMATED_CONVERSION_FORMAT=mp4
+      - AUTOMATED_CONVERSION_KEEP_SOURCE=1
+      - AUTOMATED_CONVERSION_CHECK_INTERVAL=10000
+ Resilio-Sync:
+    container_name: resilio-sync 
+    restart: unless-stopped
+    image: linuxserver/resilio-sync
+    network_mode: host
+    ports:
+      - 8888:8888
+      - 55555:55555
+    volumes:
+      - ${USERDIR}/docker/resilio/config:/config:rw
+      - ${USERDIR}/docker/resilio/storage/:/sync
+      - ${USERDIR}/docker/resilio/downloads/:/downloads:rw
+    environment:
+      - TZ=${TZ}
+      - PUID=1000
+      - PGID=999
+ Airconnect:
+    container_name: AirConnect
+    restart: unless-stopped
+    image: swilsonau/docker-airconnect
+    network_mode: host
+    environment:
+      - TZ=${TZ}
+ MariaDB:
+    container_name: MariaDB
+    restart: unless-stopped
+    image: linuxserver/mariadb
+    ports:
+      - 3306:3306
+    volumes:
+      - ${USERDIR}/docker/MariaDB/config/:/config
+    environment:
+      - TZ=${TZ}
+      - PUID=1000
+      - PGID=999
+      - MYSQL_ROOT_PASSWORD=XXXX
+ Nextcloud:
+    container_name: Nextcloud
+    restart: unless-stopped
+    image: linuxserver/nextcloud
+    ports:
+      - 443:443
+    volumes:
+      - ${USERDIR}/docker/Nextcload/config/:/config
+      - ${USERDIR}/docker/Nextcload/storage/:/sync
+    environment:
+      - TZ=${TZ}
+      - PUID=1000
+      - PGID=999
+ nginxproxy:
+    image: jwilder/nginx-proxy
+    networks:
+      extern:
+        ipv4_address: 172.20.0.2
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginxproxy_certs:/etc/nginx/certs:ro
+      - nginxproxy_vhosts:/etc/nginx/vhost.d
+      - nginxproxy_html:/usr/share/nginx/html
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+ nginxproxy_comp:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginxproxy_comp
+    depends_on:
+      - nginxproxy
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginxproxy_certs:/etc/nginx/certs:rw
+      - nginxproxy_vhosts:/etc/nginx/vhost.d
+      - nginxproxy_html:/usr/share/nginx/html
